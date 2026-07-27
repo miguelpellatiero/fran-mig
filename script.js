@@ -61,7 +61,7 @@ musicToggle.addEventListener('click', async () => {
       musicToggle.setAttribute('aria-label', 'Pausar música');
       musicLabel.textContent = 'Pausar música';
     } catch (error) {
-      musicLabel.textContent = 'Adicione musica.mp3';
+      musicLabel.textContent = 'Não foi possível tocar';
       console.error('Não foi possível tocar a música:', error);
     }
   } else {
