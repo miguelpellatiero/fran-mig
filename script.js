@@ -48,3 +48,26 @@ class Paper {
 }
 
 document.querySelectorAll('.paper').forEach((paper) => new Paper(paper));
+
+const music = document.querySelector('#background-music');
+const musicToggle = document.querySelector('.music-toggle');
+const musicLabel = document.querySelector('.music-label');
+
+musicToggle.addEventListener('click', async () => {
+  if (music.paused) {
+    try {
+      await music.play();
+      musicToggle.setAttribute('aria-pressed', 'true');
+      musicToggle.setAttribute('aria-label', 'Pausar música');
+      musicLabel.textContent = 'Pausar música';
+    } catch (error) {
+      musicLabel.textContent = 'Adicione musica.mp3';
+      console.error('Não foi possível tocar a música:', error);
+    }
+  } else {
+    music.pause();
+    musicToggle.setAttribute('aria-pressed', 'false');
+    musicToggle.setAttribute('aria-label', 'Tocar música');
+    musicLabel.textContent = 'Tocar nossa música';
+  }
+});
