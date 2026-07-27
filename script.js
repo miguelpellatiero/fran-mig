@@ -52,22 +52,39 @@ document.querySelectorAll('.paper').forEach((paper) => new Paper(paper));
 const music = document.querySelector('#background-music');
 const musicToggle = document.querySelector('.music-toggle');
 const musicLabel = document.querySelector('.music-label');
+const musicIcon = document.querySelector('.music-icon');
+
+function updateMusicControl(isPlaying) {
+  musicToggle.setAttribute('aria-pressed', String(isPlaying));
+  musicToggle.setAttribute('aria-label', isPlaying ? 'Pausar música' : 'Tocar música');
+  musicLabel.textContent = isPlaying ? 'Pausar música' : 'Tocar nossa música';
+  musicIcon.textContent = isPlaying ? '❚❚' : '▶';
+}
+
+async function playFromBeginning() {
+  music.currentTime = 0;
+  try {
+    await music.play();
+    updateMusicControl(true);
+  } catch (error) {
+    updateMusicControl(false);
+    console.info('A reprodução automática foi bloqueada pelo navegador.', error);
+  }
+}
 
 musicToggle.addEventListener('click', async () => {
   if (music.paused) {
     try {
       await music.play();
-      musicToggle.setAttribute('aria-pressed', 'true');
-      musicToggle.setAttribute('aria-label', 'Pausar música');
-      musicLabel.textContent = 'Pausar música';
+      updateMusicControl(true);
     } catch (error) {
       musicLabel.textContent = 'Não foi possível tocar';
       console.error('Não foi possível tocar a música:', error);
     }
   } else {
     music.pause();
-    musicToggle.setAttribute('aria-pressed', 'false');
-    musicToggle.setAttribute('aria-label', 'Tocar música');
-    musicLabel.textContent = 'Tocar nossa música';
+    updateMusicControl(false);
   }
 });
+
+window.addEventListener('load', playFromBeginning);
