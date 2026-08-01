@@ -10,6 +10,39 @@ body {
   overflow: hidden;
   background: center / 1000px url("https://www.psdgraphics.com/wp-content/uploads/2022/01/white-math-paper-texture.jpg");
 }
+/* Botão minimalista para abrir o player */
+.music-link {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 9999;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.music-link:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: scale(1.08);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+}
+
+.music-link-icon {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
 
 .music-toggle {
   position: fixed;
