@@ -80,7 +80,22 @@
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
-  .app{ width:100%; max-width:480px; padding:28px 20px 20px; }
+  /* --- bolhas de fundo --- */
+  .bubbles{ position:fixed; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
+  .bubble{
+    position:absolute; bottom:-60px; border-radius:50%;
+    box-shadow: inset -4px -4px 10px rgba(255,255,255,.15);
+    animation-name:bubbleRise; animation-timing-function:ease-in-out; animation-iteration-count:infinite;
+  }
+  @keyframes bubbleRise{
+    0%{ transform:translate(0,0) scale(.85); opacity:0; }
+    12%{ opacity:.8; }
+    50%{ transform:translate(var(--drift), -55vh) scale(1); }
+    88%{ opacity:.45; }
+    100%{ transform:translate(calc(var(--drift) * 1.6), -115vh) scale(1.08); opacity:0; }
+  }
+
+  .app{ width:100%; max-width:480px; padding:28px 20px 20px; position:relative; z-index:1; }
   .brand{ display:flex; align-items:center; justify-content:space-between; margin-bottom:26px; gap:8px; }
   .brand .mark{ font-family:'Sora',sans-serif; font-weight:800; font-size:20px; letter-spacing:.5px; flex:none; }
   .brand .mark span{ color:var(--rose); }
@@ -171,7 +186,7 @@
   .empty-list{ text-align:center; color:var(--smoke-dim); font-size:13px; padding:18px 0; }
 
   .player{
-    position:fixed; left:0; right:0; bottom:0;
+    position:fixed; left:0; right:0; bottom:0; z-index:1;
     display:flex; justify-content:center;
     padding:0 14px 16px;
     pointer-events:none;
@@ -218,17 +233,19 @@
   }
   @media (prefers-reduced-motion: reduce){
     .track .eq i{ animation:none; height:8px; }
+    .bubble{ display:none; }
     *{ transition:none !important; }
   }
   @media (max-width:360px){ .vol-row{ display:none; } }
 </style>
 </head>
 <body>
+<div class="bubbles" id="bubbles" aria-hidden="true"></div>
 
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-card">
     <div class="mark">fran-mig<span>.</span></div>
-    <p class="tag">Só eu e voce</p>
+    <p class="tag">Só vocês dois entram aqui</p>
     <div class="auth-field">
       <label for="authEmail">Email</label>
       <input type="email" id="authEmail" autocomplete="username" placeholder="seu@email.com">
@@ -246,7 +263,7 @@
 
 <div class="app" id="appRoot" style="display:none;">
   <div class="brand">
-    <div class="mark">fran-mig<span>.</span></div>
+    <div class="mark">wavv<span>.</span></div>
     <div class="right">
       <div class="count" id="trackCount">0 músicas</div>
       <button class="logout" id="logoutBtn" aria-label="Sair" title="Sair">
@@ -264,14 +281,12 @@
 
   <div class="meta">
     <h1 id="playlistTitle" contenteditable="true" spellcheck="false">Nossa playlist</h1>
-    <p id="playlistSubtitle">particulas que se juntam no mesmo espaço</p>
-        <p id="playlistSubtitle">particulas que se juntam no mesmo espaço</p>
-
+    <p id="playlistSubtitle">Adicionem MP3s para ouvir juntos</p>
   </div>
 
   <div class="upload-zone" id="uploadZone">
     <input type="file" id="fileInput" accept="audio/*" multiple hidden>
-    <input type="file" id="coverInput" accept="image/*" hidden>
+    <input type="file" id="coverInput" accept="image/*,video/*" hidden>
     <button class="upload-btn" id="uploadBtn">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
       Adicionar músicas
@@ -832,6 +847,27 @@ document.addEventListener('keydown', (e) => {
 const titleEl = document.getElementById('playlistTitle');
 titleEl.addEventListener('blur', () => { if (!titleEl.textContent.trim()) titleEl.textContent = 'Nossa playlist'; });
 titleEl.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); titleEl.blur(); } });
+
+function initBubbles(){
+  const wrap = document.getElementById('bubbles');
+  if (!wrap) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const colors = ['rgba(124,77,255,.35)','rgba(255,111,156,.30)','rgba(167,139,250,.28)'];
+  const count = window.innerWidth < 480 ? 11 : 18;
+  for (let i = 0; i < count; i++){
+    const b = document.createElement('span');
+    b.className = 'bubble';
+    const size = 8 + Math.random() * 44;
+    const left = Math.random() * 100;
+    const duration = 14 + Math.random() * 18;
+    const delay = -Math.random() * duration;
+    const drift = (Math.random() * 60 - 30);
+    const color = colors[i % colors.length];
+    b.style.cssText = `width:${size}px;height:${size}px;left:${left}%;animation-duration:${duration}s;animation-delay:${delay}s;--drift:${drift}px;background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), ${color} 55%, transparent 78%);`;
+    wrap.appendChild(b);
+  }
+}
+initBubbles();
 
 initAuth();
 </script>
