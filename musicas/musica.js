@@ -74,6 +74,8 @@ function showLogin(){
   stopCarouselRotation();
   stopCarouselRefresh();
   currentUserEmail = null;
+  const feedEl = document.getElementById('notesFeed');
+  if (feedEl) feedEl.innerHTML = '';
 }
 async function enterApp(){
   authOverlay.style.display = 'none';
@@ -631,5 +633,53 @@ carouselInput.addEventListener('change', async (e) => {
   if (uploaded > 0) showToast(uploaded === 1 ? 'Foto adicionada' : `${uploaded} fotos adicionadas`);
   await loadCarouselPhotos();
 });
+
+/* ---------- recados ---------- */
+const notesFeed = document.getElementById('notesFeed');
+const noteInput = document.getElementById('noteInput');
+const noteSendBtn = document.getElementById('noteSendBtn');
+const NOTES_LIMIT = 30;
+let myUserId = null;
+
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+async function loadNotes(){
+  const { data: userData } = await sb.auth.getUser();
+  if (userData && userData.user) myUserId = userData.user.id;
+  const { data, error } = await sb.from('notes').select('*').order('created_at', { ascending: true }).limit(NOTES_LIMIT);
+  if (error || !data) return;
+  renderNotes(data);
+}
+
+function renderNotes(list){
+  if (!notesFeed) return;
+  notesFeed.innerHTML = '';
+  list.forEach(n => {
+    const mine = n.sender_id === myUserId;
+    const bubble = document.createElement('div');
+    bubble.className = 'note-bubble ' + (mine ? 'mine' : 'theirs');
+    const who = n.sender_email ? n.sender_email.split('@')[0] : '...';
+    bubble.innerHTML = (mine ? '' : `<span class="who">${escapeHtml(who)}</span>`) + escapeHtml(n.content);
+    notesFeed.appendChild(bubble);
+  });
+  notesFeed.scrollTop = notesFeed.scrollHeight;
+}
+
+async function sendNote(){
+  const content = noteInput.value.trim().slice(0, 80);
+  if (!content || !myUserId) return;
+  noteSendBtn.disabled = true;
+  const { data: userData } = await sb.auth.getUser();
+  const email = userData && userData.user ? userData.user.email : null;
+  const { error } = await sb.from('notes').insert({ sender_id: myUserId, sender_email: email, content });
+  noteSendBtn.disabled = false;
+  if (error){ showToast('Erro ao enviar recado'); return; }
+  noteInput.value = '';
+  await loadNotes();
+}
+noteSendBtn.addEventListener('click', sendNote);
+noteInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); sendNote(); } });
 
 initAuth();
