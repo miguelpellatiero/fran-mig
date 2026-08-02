@@ -10,11 +10,11 @@
 <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="musica.css">
-<link rel="icon" href="fm.png">
-
 </head>
 <body>
 <div class="bubbles" id="bubbles" aria-hidden="true"></div>
+<div class="photo-carousel" id="photoCarousel" aria-hidden="true"></div>
+<input type="file" id="carouselInput" accept="image/*" multiple hidden>
 
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-card">
@@ -40,6 +40,9 @@
     <div class="mark">Fran-mig<span>.</span></div>
     <div class="right">
       <div class="count" id="trackCount">0 músicas</div>
+      <button class="carousel-add-btn" id="carouselAddBtn" aria-label="Adicionar fotos ao fundo" title="Adicionar fotos ao fundo" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-5-5L5 19"/></svg>
+      </button>
       <button class="logout" id="logoutBtn" aria-label="Sair" title="Sair">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
       </button>
@@ -56,6 +59,16 @@
   <div class="meta">
     <h1 id="playlistTitle" contenteditable="true" spellcheck="false">Nossa playlist</h1>
     <p id="playlistSubtitle">Adicionem MP3s para ouvir juntos</p>
+  </div>
+
+  <div class="notes-section">
+    <div class="notes-feed" id="notesFeed"></div>
+    <div class="notes-input-row">
+      <input type="text" id="noteInput" maxlength="80" placeholder="Deixe um recado pra ela/ele...">
+      <button id="noteSendBtn" aria-label="Enviar recado">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+      </button>
+    </div>
   </div>
 
   <div class="upload-zone" id="uploadZone">

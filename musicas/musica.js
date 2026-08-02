@@ -68,15 +68,25 @@ function showLogin(){
   authOverlay.style.display = 'flex';
   appRoot.style.display = 'none';
   playerBar.style.display = 'none';
+  document.getElementById('carouselAddBtn').style.display = 'none';
   if (realtimeChannel){ sb.removeChannel(realtimeChannel); realtimeChannel = null; }
   audio.pause();
+  stopCarouselRotation();
+  stopCarouselRefresh();
+  currentUserEmail = null;
 }
 async function enterApp(){
   authOverlay.style.display = 'none';
   appRoot.style.display = 'block';
   playerBar.style.display = 'flex';
+  document.getElementById('carouselAddBtn').style.display = 'flex';
+  const { data: userData } = await sb.auth.getUser();
+  currentUserEmail = userData && userData.user ? userData.user.email : null;
   subscribeRealtime();
   await loadLibrary();
+  await loadCarouselPhotos();
+  await loadNotes();
+  startCarouselRefresh();
 }
 authSubmit.addEventListener('click', async () => {
   authError.textContent = '';
@@ -95,6 +105,8 @@ function subscribeRealtime(){
   if (realtimeChannel) return;
   realtimeChannel = sb.channel('tracks-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tracks' }, () => loadLibrary())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'carousel_photos' }, () => loadCarouselPhotos())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, () => loadNotes())
     .subscribe();
 }
 
@@ -535,5 +547,89 @@ function initBubbles(){
   }
 }
 initBubbles();
+
+/* ---------- carrossel de fotos de fundo ---------- */
+const CAROUSEL_PREFIX = 'carousel';
+const CAROUSEL_ROTATE_MS = 6500;
+const CAROUSEL_REFRESH_MS = 5 * 60 * 1000;
+const carouselAddBtn = document.getElementById('carouselAddBtn');
+const carouselInput = document.getElementById('carouselInput');
+let carouselPhotos = [];
+let carouselIndex = 0;
+let carouselTimer = null;
+let carouselRefreshTimer = null;
+
+async function loadCarouselPhotos(){
+  const { data, error } = await sb.from('carousel_photos').select('*').order('added_at', { ascending: false });
+  if (error || !data) return;
+  const withUrls = await Promise.all(data.map(async row => {
+    const url = await signedUrl(row.path);
+    return url ? { id: row.id, path: row.path, url } : null;
+  }));
+  carouselPhotos = withUrls.filter(Boolean);
+  renderCarousel();
+}
+
+function renderCarousel(){
+  const wrap = document.getElementById('photoCarousel');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  stopCarouselRotation();
+  if (carouselPhotos.length === 0) return;
+  carouselPhotos.forEach((p, i) => {
+    const img = document.createElement('img');
+    img.className = 'carousel-photo' + (i === 0 ? ' active' : '');
+    img.src = p.url;
+    img.alt = '';
+    wrap.appendChild(img);
+  });
+  carouselIndex = 0;
+  startCarouselRotation();
+}
+
+function startCarouselRotation(){
+  stopCarouselRotation();
+  if (carouselPhotos.length <= 1) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  carouselTimer = setInterval(() => {
+    const wrap = document.getElementById('photoCarousel');
+    if (!wrap) return;
+    const imgs = wrap.querySelectorAll('.carousel-photo');
+    if (imgs.length === 0) return;
+    imgs[carouselIndex].classList.remove('active');
+    carouselIndex = (carouselIndex + 1) % imgs.length;
+    imgs[carouselIndex].classList.add('active');
+  }, CAROUSEL_ROTATE_MS);
+}
+function stopCarouselRotation(){ if (carouselTimer){ clearInterval(carouselTimer); carouselTimer = null; } }
+function startCarouselRefresh(){
+  stopCarouselRefresh();
+  carouselRefreshTimer = setInterval(loadCarouselPhotos, CAROUSEL_REFRESH_MS);
+}
+function stopCarouselRefresh(){ if (carouselRefreshTimer){ clearInterval(carouselRefreshTimer); carouselRefreshTimer = null; } }
+
+carouselAddBtn.addEventListener('click', () => carouselInput.click());
+carouselInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  carouselInput.value = '';
+  if (files.length === 0) return;
+  const { data: userData } = await sb.auth.getUser();
+  const addedBy = userData && userData.user ? userData.user.email : null;
+  let uploaded = 0;
+  for (const file of files){
+    if (!file.type.startsWith('image/')) continue;
+    if (file.size > 15 * 1024 * 1024){ showToast('Foto grande demais (máx. 15MB)'); continue; }
+    const id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
+    const ext = extFromMime(file.type);
+    const path = `${CAROUSEL_PREFIX}/${id}.${ext}`;
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, file, { upsert: false, contentType: file.type || 'image/jpeg' });
+    if (upErr){ showToast('Erro ao enviar foto'); continue; }
+    const { error: insErr } = await sb.from('carousel_photos').insert({ id, path, added_by: addedBy });
+    if (insErr){ showToast('Erro ao salvar foto'); continue; }
+    uploaded++;
+  }
+  if (uploaded > 0) showToast(uploaded === 1 ? 'Foto adicionada' : `${uploaded} fotos adicionadas`);
+  await loadCarouselPhotos();
+});
 
 initAuth();
