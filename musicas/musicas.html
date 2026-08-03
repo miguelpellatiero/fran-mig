@@ -61,31 +61,38 @@
     <p id="playlistSubtitle">Adicionem MP3s para ouvir juntos</p>
   </div>
 
-  <div class="notes-section">
-    <div class="notes-feed" id="notesFeed"></div>
-    <div class="notes-input-row">
-      <input type="text" id="noteInput" maxlength="80" placeholder="Deixe um recado pra ela/ele...">
-      <button id="noteSendBtn" aria-label="Enviar recado">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-      </button>
+  <div class="notes-section" id="notesSection">
+    <button class="notes-header" id="notesToggle">
+      <span class="notes-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Recados
+      </span>
+      <svg class="notes-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="notes-body" id="notesBody">
+      <div class="notes-feed" id="notesFeed"></div>
+      <div class="notes-input-row">
+        <input type="text" id="noteInput" maxlength="80" placeholder="Deixe um recado pra ela/ele...">
+        <button id="noteSendBtn" aria-label="Enviar recado">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 
-  <div class="upload-zone" id="uploadZone">
+  <div class="add-row" id="uploadZone">
     <input type="file" id="fileInput" accept="audio/*" multiple hidden>
     <input type="file" id="coverInput" accept="image/*,video/*" hidden>
-    <button class="upload-btn" id="uploadBtn">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+    <button class="add-pill" id="uploadBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>
       Adicionar músicas
     </button>
-    <span class="upload-hint" id="uploadHint">ou arraste os arquivos aqui</span>
-  </div>
-  <div class="lib-row">
-    <span class="tag">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      sincronizado entre vocês dois
-    </span>
-    <button id="clearLibBtn">limpar tudo</button>
+    <div class="add-row-right">
+      <span class="sync-dot" title="Sincronizado entre vocês dois"></span>
+      <button class="icon-btn" id="clearLibBtn" aria-label="Limpar tudo" title="Limpar tudo">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+    </div>
   </div>
 
   <div class="tracklist" id="tracklist">
@@ -96,38 +103,41 @@
 <div class="player" id="playerBar" style="display:none;">
   <div class="player-inner">
     <div class="seek-row">
-      <span id="curTime">0:00</span>
-      <input type="range" id="seek" min="0" max="100" value="0" disabled>
-      <span id="durTime">0:00</span>
+      <span class="js-curtime" id="curTime">0:00</span>
+      <input class="js-seek" type="range" id="seek" min="0" max="100" value="0" disabled>
+      <span class="js-durtime" id="durTime">0:00</span>
     </div>
 
-    <div class="now">
-      <div class="mini" id="nowCover" style="background:rgba(255,255,255,.08)"></div>
+    <div class="now" id="nowRow">
+      <div class="mini js-cover" id="nowCover" style="background:rgba(255,255,255,.08)"></div>
       <div class="txt">
-        <div class="n" id="nowName">Nenhuma música selecionada</div>
-        <div class="a" id="nowArtist">—</div>
+        <div class="n js-track-name" id="nowName">Nenhuma música selecionada</div>
+        <div class="a js-track-artist" id="nowArtist">—</div>
       </div>
+      <button class="expand-btn" id="expandBtn" aria-label="Maximizar player">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>
+      </button>
     </div>
 
     <div class="controls">
       <div class="side">
-        <button class="ctl-btn" id="shuffleBtn" aria-label="Aleatório" disabled>
+        <button class="ctl-btn js-shuffle-btn" id="shuffleBtn" aria-label="Aleatório" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
         </button>
-        <button class="ctl-btn" id="prevBtn" aria-label="Anterior" disabled>
+        <button class="ctl-btn js-prev-btn" id="prevBtn" aria-label="Anterior" disabled>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM10 12l9-6v12z"/></svg>
         </button>
       </div>
 
-      <button class="play-main" id="playBtn" aria-label="Reproduzir" disabled>
-        <svg id="playIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <button class="play-main js-play-btn" id="playBtn" aria-label="Reproduzir" disabled>
+        <svg class="js-play-icon" id="playIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </button>
 
       <div class="side">
-        <button class="ctl-btn" id="nextBtn" aria-label="Próxima" disabled>
+        <button class="ctl-btn js-next-btn" id="nextBtn" aria-label="Próxima" disabled>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM5 6l9 6-9 6z"/></svg>
         </button>
-        <button class="ctl-btn" id="repeatBtn" aria-label="Repetir" disabled>
+        <button class="ctl-btn js-repeat-btn" id="repeatBtn" aria-label="Repetir" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
         </button>
       </div>
@@ -137,6 +147,40 @@
         <input type="range" id="vol" min="0" max="100" value="80">
       </div>
     </div>
+  </div>
+</div>
+
+<div class="player-expanded" id="playerExpanded">
+  <button class="collapse-btn" id="collapseBtn" aria-label="Minimizar player">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+
+  <div class="big-cover js-cover" id="bigCover"></div>
+  <div class="big-name js-track-name">Nenhuma música selecionada</div>
+  <div class="big-artist js-track-artist">—</div>
+
+  <div class="seek-row big-seek-row">
+    <span class="js-curtime">0:00</span>
+    <input class="js-seek" type="range" min="0" max="100" value="0" disabled>
+    <span class="js-durtime">0:00</span>
+  </div>
+
+  <div class="controls big-controls">
+    <button class="ctl-btn js-shuffle-btn" aria-label="Aleatório" disabled>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+    </button>
+    <button class="ctl-btn js-prev-btn" aria-label="Anterior" disabled>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM10 12l9-6v12z"/></svg>
+    </button>
+    <button class="play-main big-play js-play-btn" aria-label="Reproduzir" disabled>
+      <svg class="js-play-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="ctl-btn js-next-btn" aria-label="Próxima" disabled>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM5 6l9 6-9 6z"/></svg>
+    </button>
+    <button class="ctl-btn js-repeat-btn" aria-label="Repetir" disabled>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+    </button>
   </div>
 </div>
 

@@ -25,19 +25,35 @@ const subtitleEl = document.getElementById('playlistSubtitle');
 const clearLibBtn = document.getElementById('clearLibBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 
-const playBtn = document.getElementById('playBtn');
-const playIcon = document.getElementById('playIcon');
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
-const shuffleBtn = document.getElementById('shuffleBtn');
-const repeatBtn = document.getElementById('repeatBtn');
-const seek = document.getElementById('seek');
-const curTimeEl = document.getElementById('curTime');
-const durTimeEl = document.getElementById('durTime');
 const volEl = document.getElementById('vol');
-const nowName = document.getElementById('nowName');
-const nowArtist = document.getElementById('nowArtist');
-const nowCover = document.getElementById('nowCover');
+const nowRow = document.getElementById('nowRow');
+const expandBtn = document.getElementById('expandBtn');
+const playerExpanded = document.getElementById('playerExpanded');
+const collapseBtn = document.getElementById('collapseBtn');
+const notesToggle = document.getElementById('notesToggle');
+const notesSection = document.getElementById('notesSection');
+
+const allSeek = document.querySelectorAll('.js-seek');
+const allCoverEls = document.querySelectorAll('.js-cover');
+const allNameEls = document.querySelectorAll('.js-track-name');
+const allArtistEls = document.querySelectorAll('.js-track-artist');
+const allCurTime = document.querySelectorAll('.js-curtime');
+const allDurTime = document.querySelectorAll('.js-durtime');
+const allPlayBtns = document.querySelectorAll('.js-play-btn');
+const allPlayIcons = document.querySelectorAll('.js-play-icon');
+const allPrevBtns = document.querySelectorAll('.js-prev-btn');
+const allNextBtns = document.querySelectorAll('.js-next-btn');
+const allShuffleBtns = document.querySelectorAll('.js-shuffle-btn');
+const allRepeatBtns = document.querySelectorAll('.js-repeat-btn');
+
+function setTextAll(list, text){ list.forEach(el => { el.textContent = text; }); }
+function applyCoverAll(list, t){ list.forEach(el => applyCover(el, t)); }
+function openNowPlaying(){ playerExpanded.classList.add('open'); }
+function closeNowPlaying(){ playerExpanded.classList.remove('open'); }
+expandBtn.addEventListener('click', openNowPlaying);
+collapseBtn.addEventListener('click', closeNowPlaying);
+nowRow.querySelector('.txt').addEventListener('click', openNowPlaying);
+notesToggle.addEventListener('click', () => notesSection.classList.toggle('collapsed'));
 
 let tracks = [];
 let currentIndex = -1;
@@ -192,7 +208,10 @@ async function signedUrl(path){
 
 /* ---------- library (Supabase) ---------- */
 async function loadLibrary(){
-  const { data, error } = await sb.from('tracks').select('*').order('added_at', { ascending: true });
+  if (dragState) return;
+  const { data, error } = await sb.from('tracks').select('*')
+    .order('sort_order', { ascending: true, nullsFirst: false })
+    .order('added_at', { ascending: true });
   if (error){ showToast('Erro ao carregar biblioteca'); return; }
   const playingId = (currentIndex >= 0 && tracks[currentIndex]) ? tracks[currentIndex].id : null;
   const wasPlaying = !audio.paused;
@@ -218,9 +237,9 @@ async function loadLibrary(){
       audio.currentTime = resumeTime || 0;
       if (wasPlaying) audio.play().catch(() => {});
     }
-    nowName.textContent = t.name;
-    nowArtist.textContent = t.addedBy ? `Adicionada por ${t.addedBy.split('@')[0]}` : 'Da nuvem de vocês';
-    applyCover(nowCover, t);
+    setTextAll(allNameEls, t.name);
+    setTextAll(allArtistEls, t.addedBy ? `Adicionada por ${t.addedBy.split('@')[0]}` : 'Da nuvem de vocês');
+    applyCoverAll(allCoverEls, t);
   }
 }
 
@@ -250,7 +269,7 @@ async function addFiles(fileList){
     }
 
     const name = file.name.replace(/\.(mp3|wav|m4a|ogg|flac)$/i,'');
-    const { error: insErr } = await sb.from('tracks').insert({ id, name, audio_path: audioPath, cover_path: coverPath, added_by: addedBy });
+    const { error: insErr } = await sb.from('tracks').insert({ id, name, audio_path: audioPath, cover_path: coverPath, added_by: addedBy, sort_order: Date.now() });
     if (insErr) showToast(`Erro ao salvar ${name}`);
   }
 
@@ -318,8 +337,8 @@ function renderAll(){
   renderCrate();
   renderTracklist();
   const hasTracks = tracks.length > 0;
-  [playBtn, prevBtn, nextBtn, shuffleBtn, repeatBtn].forEach(b => b.disabled = !hasTracks);
-  seek.disabled = !hasTracks;
+  [...allPlayBtns, ...allPrevBtns, ...allNextBtns, ...allShuffleBtns, ...allRepeatBtns].forEach(b => b.disabled = !hasTracks);
+  allSeek.forEach(s => { s.disabled = !hasTracks; });
 }
 
 function renderCrate(){
@@ -384,7 +403,11 @@ function renderTracklist(){
     row.tabIndex = 0;
     const playing = i === currentIndex && !audio.paused && !audio.ended;
     const statusText = playing ? 'Tocando agora' : (t.addedBy ? `Adicionada por ${t.addedBy.split('@')[0]}` : 'Na nuvem');
+    row.dataset.id = t.id;
     row.innerHTML = `
+      <button class="drag-handle" aria-label="Segurar e arrastar para reordenar" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+      </button>
       <div class="mini" style="${cssBackgroundFor(t)}">${isVideoCover(t) ? `<video class="cover-video" src="${t.coverUrl}" muted autoplay loop playsinline></video>` : (t.coverUrl ? '' : `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.85)">${initialsOf(t.name)}</span>`)}</div>
       <div class="info">
         <div class="name" data-id="${t.id}">${t.name}</div>
@@ -402,7 +425,7 @@ function renderTracklist(){
       </button>
     `;
     row.addEventListener('click', (e) => {
-      if (e.target.closest('.rm') || e.target.closest('.cover-edit') || e.target.closest('.rename-btn') || e.target.closest('.name-input')) return;
+      if (e.target.closest('.rm') || e.target.closest('.cover-edit') || e.target.closest('.rename-btn') || e.target.closest('.name-input') || e.target.closest('.drag-handle')) return;
       currentIndex = i;
       loadTrack(currentIndex);
       playCurrent();
@@ -410,6 +433,7 @@ function renderTracklist(){
     row.querySelector('.rm').addEventListener('click', (e) => { e.stopPropagation(); removeTrack(t.id); });
     row.querySelector('.cover-edit').addEventListener('click', (e) => { e.stopPropagation(); openCoverPicker(t.id); });
     row.querySelector('.rename-btn').addEventListener('click', (e) => { e.stopPropagation(); startRename(row, t); });
+    row.querySelector('.drag-handle').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); startDrag(row, e); });
     tracklistEl.appendChild(row);
   });
 }
@@ -444,17 +468,68 @@ function startRename(row, t){
   });
 }
 
-/* ---------- playback ---------- */
+/* ---------- arrastar para reordenar ---------- */
+let dragState = null;
+
+function startDrag(row, e){
+  if (dragState) return;
+  const fromIndex = Array.from(tracklistEl.children).indexOf(row);
+  dragState = { row, fromIndex, pointerId: e.pointerId };
+  try { row.setPointerCapture(e.pointerId); } catch (err) {}
+  row.classList.add('dragging');
+  if (navigator.vibrate) navigator.vibrate(12);
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+  document.addEventListener('pointercancel', onDragEnd);
+}
+
+function onDragMove(e){
+  if (!dragState) return;
+  e.preventDefault();
+  const rows = Array.from(tracklistEl.children).filter(el => el.classList.contains('track'));
+  const draggedRow = dragState.row;
+  const y = e.clientY;
+  for (const sib of rows){
+    if (sib === draggedRow) continue;
+    const rect = sib.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    if (y < mid){
+      tracklistEl.insertBefore(draggedRow, sib);
+      return;
+    }
+  }
+  tracklistEl.appendChild(draggedRow);
+}
+
+async function onDragEnd(){
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragEnd);
+  if (!dragState) return;
+  const row = dragState.row;
+  row.classList.remove('dragging');
+  dragState = null;
+
+  const playingId = (currentIndex >= 0 && tracks[currentIndex]) ? tracks[currentIndex].id : null;
+  const newOrderIds = Array.from(tracklistEl.querySelectorAll('.track')).map(el => el.dataset.id);
+  const reordered = newOrderIds.map(id => tracks.find(t => t.id === id)).filter(Boolean);
+  if (reordered.length === tracks.length) tracks = reordered;
+  currentIndex = playingId ? tracks.findIndex(t => t.id === playingId) : -1;
+
+  await Promise.all(tracks.map((t, i) => sb.from('tracks').update({ sort_order: i }).eq('id', t.id)));
+}
+
+
 function loadTrack(i){
   const t = tracks[i];
   if (!t) return;
   audio.src = t.audioUrl;
-  nowName.textContent = t.name;
-  nowArtist.textContent = t.addedBy ? `Adicionada por ${t.addedBy.split('@')[0]}` : 'Da nuvem de vocês';
-  applyCover(nowCover, t);
-  seek.value = 0;
-  curTimeEl.textContent = '0:00';
-  durTimeEl.textContent = '0:00';
+  setTextAll(allNameEls, t.name);
+  setTextAll(allArtistEls, t.addedBy ? `Adicionada por ${t.addedBy.split('@')[0]}` : 'Da nuvem de vocês');
+  applyCoverAll(allCoverEls, t);
+  allSeek.forEach(s => { s.value = 0; });
+  setTextAll(allCurTime, '0:00');
+  setTextAll(allDurTime, '0:00');
 }
 function playCurrent(){ audio.play().catch(() => {}); }
 function togglePlay(){
@@ -481,34 +556,43 @@ function prev(){
   playCurrent();
 }
 
-playBtn.addEventListener('click', togglePlay);
-nextBtn.addEventListener('click', next);
-prevBtn.addEventListener('click', prev);
-shuffleBtn.addEventListener('click', () => { isShuffle = !isShuffle; shuffleBtn.classList.toggle('toggled', isShuffle); });
-repeatBtn.addEventListener('click', () => { isRepeat = !isRepeat; repeatBtn.classList.toggle('toggled', isRepeat); audio.loop = isRepeat; });
+allPlayBtns.forEach(b => b.addEventListener('click', togglePlay));
+allNextBtns.forEach(b => b.addEventListener('click', next));
+allPrevBtns.forEach(b => b.addEventListener('click', prev));
+allShuffleBtns.forEach(b => b.addEventListener('click', () => {
+  isShuffle = !isShuffle;
+  allShuffleBtns.forEach(x => x.classList.toggle('toggled', isShuffle));
+}));
+allRepeatBtns.forEach(b => b.addEventListener('click', () => {
+  isRepeat = !isRepeat;
+  allRepeatBtns.forEach(x => x.classList.toggle('toggled', isRepeat));
+  audio.loop = isRepeat;
+}));
 
 audio.addEventListener('play', () => {
-  playIcon.innerHTML = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
-  playBtn.setAttribute('aria-label','Pausar');
+  allPlayIcons.forEach(icon => { icon.innerHTML = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'; });
+  allPlayBtns.forEach(b => b.setAttribute('aria-label','Pausar'));
   renderCrate(); renderTracklist();
 });
 audio.addEventListener('pause', () => {
-  playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-  playBtn.setAttribute('aria-label','Reproduzir');
+  allPlayIcons.forEach(icon => { icon.innerHTML = '<path d="M8 5v14l11-7z"/>'; });
+  allPlayBtns.forEach(b => b.setAttribute('aria-label','Reproduzir'));
   renderCrate(); renderTracklist();
 });
 audio.addEventListener('ended', () => { if (!isRepeat) next(); });
 audio.addEventListener('loadedmetadata', () => {
-  seek.max = Math.floor(audio.duration) || 0;
-  durTimeEl.textContent = formatTime(audio.duration);
+  allSeek.forEach(s => { s.max = Math.floor(audio.duration) || 0; });
+  setTextAll(allDurTime, formatTime(audio.duration));
 });
 audio.addEventListener('timeupdate', () => {
   if (seeking) return;
-  seek.value = Math.floor(audio.currentTime);
-  curTimeEl.textContent = formatTime(audio.currentTime);
+  allSeek.forEach(s => { s.value = Math.floor(audio.currentTime); });
+  setTextAll(allCurTime, formatTime(audio.currentTime));
 });
-seek.addEventListener('input', () => { seeking = true; curTimeEl.textContent = formatTime(seek.value); });
-seek.addEventListener('change', () => { audio.currentTime = Number(seek.value); seeking = false; });
+allSeek.forEach(s => {
+  s.addEventListener('input', () => { seeking = true; setTextAll(allCurTime, formatTime(s.value)); allSeek.forEach(o => { if (o !== s) o.value = s.value; }); });
+  s.addEventListener('change', () => { audio.currentTime = Number(s.value); seeking = false; });
+});
 volEl.addEventListener('input', () => { audio.volume = Number(volEl.value) / 100; });
 
 uploadBtn.addEventListener('click', () => fileInput.click());
@@ -653,6 +737,13 @@ async function loadNotes(){
   renderNotes(data);
 }
 
+function formatNoteTime(iso){
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return ''; }
+}
+
 function renderNotes(list){
   if (!notesFeed) return;
   notesFeed.innerHTML = '';
@@ -661,7 +752,11 @@ function renderNotes(list){
     const bubble = document.createElement('div');
     bubble.className = 'note-bubble ' + (mine ? 'mine' : 'theirs');
     const who = n.sender_email ? n.sender_email.split('@')[0] : '...';
-    bubble.innerHTML = (mine ? '' : `<span class="who">${escapeHtml(who)}</span>`) + escapeHtml(n.content);
+    bubble.innerHTML = `
+      ${mine ? '' : `<span class="who">${escapeHtml(who)}</span>`}
+      <div class="bubble-text">${escapeHtml(n.content)}</div>
+      <span class="when">${formatNoteTime(n.created_at)}</span>
+    `;
     notesFeed.appendChild(bubble);
   });
   notesFeed.scrollTop = notesFeed.scrollHeight;
